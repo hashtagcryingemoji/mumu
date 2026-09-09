@@ -53,11 +53,11 @@ namespace mumu {
             }
 
             T &operator*() {
-                return &content_;
+                return *content_;
             }
 
             const T &operator*() const {
-                return &content_;
+                return *content_;
             }
 
             ~mutex_guard() {
