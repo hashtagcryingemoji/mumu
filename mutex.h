@@ -2,6 +2,7 @@
 #define MUMU_MUTEX_H
 
 #include "atomic"
+#include "utility"
 
 #if __cplusplus >= 202002L
 
@@ -30,15 +31,19 @@ namespace mumu {
             friend class mutex;
 
         public:
-            mutex_guard(mutex_guard &&o) noexcept {
-                this->content_ = o.content_;
-                this->_parent = o._parent;
+            mutex_guard(mutex_guard &&o) noexcept
+                : content_(std::exchange(o.content_, nullptr)),
+                  _parent(std::exchange(o._parent, nullptr)) {
             }
 
             mutex_guard &operator=(mutex_guard &&o) noexcept {
                 if (this != &o) {
-                    this->content_ = o.content_;
-                    this->_parent = o._parent;
+                    if (_parent) {
+                        _parent->unlock();
+                    }
+
+                    content_ = std::exchange(o.content_, nullptr);
+                    _parent = std::exchange(o._parent, nullptr);
                 }
 
                 return *this;
@@ -61,7 +66,7 @@ namespace mumu {
             }
 
             ~mutex_guard() {
-                _parent->unlock();
+                if (_parent) _parent->unlock();
             }
 
             mutex_guard(mutex_guard &o) = delete;
