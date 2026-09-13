@@ -1,75 +1,65 @@
 #ifndef MUMU_MUTEX_H
 #define MUMU_MUTEX_H
 
-#include "atomic"
-#include "utility"
-
-#if __cplusplus >= 202002L
-
-#include "type_traits"
-#include "concepts"
-
-template<typename K>
-concept mutexable = std::is_destructible_v<K> && std::is_object_v<K> && std::movable<K>;
-#endif
+#include <atomic>
+#include <cassert>
+#include <concepts>
+#include <utility>
 
 namespace mumu {
-    template<typename T>
-#if __cplusplus >= 202002L
-    requires mutexable<T>
-#endif
+
+    template<std::movable T>
     class mutex {
     public:
-        template<typename V>
         class mutex_guard {
-            V *content_;
-            mutex *_parent;
+            mutex *parent_;
 
-            explicit mutex_guard(V *content, mutex *parent_mutex) : content_(content), _parent(parent_mutex) {
+            explicit mutex_guard(mutex *parent) : parent_(parent) {
             }
 
             friend class mutex;
 
         public:
             mutex_guard(mutex_guard &&o) noexcept
-                : content_(std::exchange(o.content_, nullptr)),
-                  _parent(std::exchange(o._parent, nullptr)) {
+                : parent_(std::exchange(o.parent_, nullptr)) {
             }
 
             mutex_guard &operator=(mutex_guard &&o) noexcept {
                 if (this != &o) {
-                    if (_parent) {
-                        _parent->unlock();
+                    if (parent_) {
+                        parent_->unlock();
                     }
-
-                    content_ = std::exchange(o.content_, nullptr);
-                    _parent = std::exchange(o._parent, nullptr);
+                    parent_ = std::exchange(o.parent_, nullptr);
                 }
 
                 return *this;
-            };
+            }
 
             T *operator->() {
-                return content_;
+                assert(parent_);
+                return &parent_->content_;
             }
 
             const T *operator->() const {
-                return content_;
+                assert(parent_);
+                return &parent_->content_;
             }
 
             T &operator*() {
-                return *content_;
+                assert(parent_);
+                return parent_->content_;
             }
 
             const T &operator*() const {
-                return *content_;
+                assert(parent_);
+                return parent_->content_;
             }
 
             ~mutex_guard() {
-                if (_parent) _parent->unlock();
+                if (parent_) parent_->unlock();
             }
 
-            mutex_guard(mutex_guard &o) = delete;
+            mutex_guard(const mutex_guard &o) = delete;
         };
 
     private:
@@ -80,26 +70,21 @@ namespace mumu {
         explicit mutex(T content) : content_(std::move(content)), state_(false) {
         }
 
-        mutex_guard<T> lock() {
+        mutex_guard lock() {
             while (state_.exchange(true, std::memory_order_relaxed)) {
             }
-            return mutex_guard(&content_, this);
+            return mutex_guard(this);
         }
 
         void unlock() {
             state_ = false;
         }
 
-        ~mutex() = default;
-
-        mutex(mutex &&o) = delete;
-
         mutex(const mutex &o) = delete;
-
-        mutex &operator=(mutex &&o) = delete;
 
         mutex &operator=(const mutex &o) = delete;
     };
+
 }
 
 #endif
