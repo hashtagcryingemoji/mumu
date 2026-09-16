@@ -70,14 +70,14 @@ namespace mumu {
         explicit mutex(T content) : content_(std::move(content)), state_(false) {
         }
 
-        mutex_guard lock() {
-            while (state_.exchange(true, std::memory_order_relaxed)) {
+        [[nodiscard]] mutex_guard lock() {
+            while (state_.exchange(true, std::memory_order_acquire)) {
             }
             return mutex_guard(this);
         }
 
         void unlock() {
-            state_ = false;
+            state_.store(false, std::memory_order_release);
         }
 
         mutex(const mutex &o) = delete;
