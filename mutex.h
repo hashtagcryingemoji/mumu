@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cassert>
 #include <concepts>
+#include <optional>
 #include <utility>
 
 namespace mumu {
@@ -74,6 +75,10 @@ namespace mumu {
             while (state_.exchange(true, std::memory_order_acquire)) {
             }
             return mutex_guard(this);
+        }
+
+        [[nodiscard]] std::optional<mutex_guard> try_lock() {
+            return state_.exchange(true, std::memory_order_acquire) ? std::nullopt : mutex_guard(this);
         }
 
         void unlock() {
