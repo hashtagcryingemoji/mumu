@@ -6,3 +6,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(mumu_guard main.cpp mutex.h)
+
+include(CTest)
+
+find_package(GTest REQUIRED CONFIG)
+
+add_executable(mutex_tests test/mutex_tests.cpp)
+target_link_libraries(mutex_tests PRIVATE GTest::gtest_main)
+
+include(GoogleTest)
+gtest_discover_tests(mutex_tests)
