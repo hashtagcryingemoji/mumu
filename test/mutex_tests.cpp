@@ -3,6 +3,10 @@
 
 #include "../mutex.h"
 
+#if defined(_MSC_VER)
+#include <crtdbg.h>
+#endif
+
 class MutexIntTest : public testing::Test {
 protected:
     mumu::mutex<int> m{0};
@@ -83,4 +87,23 @@ TEST(Mutex, MoveGuardTransfersOwnership) {
 
     auto l = m.try_lock();
     EXPECT_TRUE(l.has_value());
+}
+
+#ifndef NDEBUG
+
+TEST(Mutex, DebugAssertHandlesDeadLock) {
+    mumu::mutex m{0};
+    auto l = m.lock();
+    EXPECT_DEATH((void)m.lock(), ".*");
+}
+
+#endif
+
+int main(int argc, char** argv) {
+#if defined(_MSC_VER)
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+#endif
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

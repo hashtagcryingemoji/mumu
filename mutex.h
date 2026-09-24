@@ -5,9 +5,17 @@
 #include <cassert>
 #include <concepts>
 #include <optional>
+#include <thread>
 #include <utility>
 
 namespace mumu {
+    namespace utils {
+#ifdef NDEBUG
+        constexpr bool is_debug = false;
+#else
+        constexpr bool is_debug = true;
+#endif
+    }
 
     template<std::movable T>
     class mutex {
@@ -37,22 +45,30 @@ namespace mumu {
             }
 
             T *operator->() {
-                assert(parent_);
+                if constexpr (utils::is_debug) {
+                    assert(parent_);
+                }
                 return &parent_->content_;
             }
 
             const T *operator->() const {
-                assert(parent_);
+                if constexpr (utils::is_debug) {
+                    assert(parent_);
+                }
                 return &parent_->content_;
             }
 
             T &operator*() {
-                assert(parent_);
+                if constexpr (utils::is_debug) {
+                    assert(parent_);
+                }
                 return parent_->content_;
             }
 
             const T &operator*() const {
-                assert(parent_);
+                if constexpr (utils::is_debug) {
+                    assert(parent_);
+                }
                 return parent_->content_;
             }
 
@@ -67,13 +83,26 @@ namespace mumu {
         T content_;
         std::atomic_bool state_;
 
+#ifndef NDEBUG
+        std::atomic<std::thread::id> locker_id_{};
+#endif
+
     public:
         explicit mutex(T content) : content_(std::move(content)), state_(false) {
         }
 
         [[nodiscard]] mutex_guard lock() {
+            if constexpr (utils::is_debug) {
+                assert(locker_id_.load(std::memory_order_relaxed) != std::this_thread::get_id()); // рекурсивный захват означает дедлок
+            }
+
             while (state_.exchange(true, std::memory_order_acquire)) {
             }
+
+            if constexpr (utils::is_debug) {
+                locker_id_.store(std::this_thread::get_id(), std::memory_order_relaxed);
+            }
+
             return mutex_guard(this);
         }
 
@@ -84,14 +113,21 @@ namespace mumu {
         }
 
         void unlock() {
+            if constexpr (utils::is_debug) {
+                assert(locker_id_.load() != std::this_thread::get_id());
+            }
+
             state_.store(false, std::memory_order_release);
+
+            if constexpr (utils::is_debug) {
+                locker_id_.store(std::thread::id{}, std::memory_order_relaxed);
+            }
         }
 
         mutex(const mutex &o) = delete;
 
         mutex &operator=(const mutex &o) = delete;
     };
-
 }
 
 #endif

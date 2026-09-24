@@ -12,7 +12,7 @@ include(CTest)
 find_package(GTest REQUIRED CONFIG)
 
 add_executable(mutex_tests test/mutex_tests.cpp)
-target_link_libraries(mutex_tests PRIVATE GTest::gtest_main)
+target_link_libraries(mutex_tests PRIVATE GTest::gtest)
 
 include(GoogleTest)
 gtest_discover_tests(mutex_tests)
