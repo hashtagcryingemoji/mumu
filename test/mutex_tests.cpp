@@ -97,6 +97,13 @@ TEST(Mutex, DebugAssertHandlesDeadLock) {
     EXPECT_DEATH((void)m.lock(), ".*");
 }
 
+TEST(Mutex, DebugAssertHandlesDeadLockWithTryLock) {
+    mumu::mutex m{0};
+    auto l = m.try_lock();
+    ASSERT_TRUE(l.has_value());
+    EXPECT_DEATH((void)m.lock(), ".*");
+}
+
 #endif
 
 int main(int argc, char** argv) {

@@ -107,9 +107,13 @@ namespace mumu {
         }
 
         [[nodiscard]] std::optional<mutex_guard> try_lock() {
-            return state_.exchange(true, std::memory_order_acquire)
-                       ? std::nullopt
-                       : std::make_optional(mutex_guard(this));
+            if (state_.exchange(true, std::memory_order_acquire)) {
+                return std::nullopt;
+            }
+            if constexpr (utils::is_debug) {
+                locker_id_.store(std::this_thread::get_id(), std::memory_order_relaxed);
+            }
+            return mutex_guard(this);
         }
 
         void unlock() {
