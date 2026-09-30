@@ -118,14 +118,10 @@ namespace mumu {
 
         void unlock() {
             if constexpr (utils::is_debug) {
-                assert(locker_id_.load() != std::this_thread::get_id());
+                locker_id_.store(std::thread::id{}, std::memory_order_relaxed);
             }
 
             state_.store(false, std::memory_order_release);
-
-            if constexpr (utils::is_debug) {
-                locker_id_.store(std::thread::id{}, std::memory_order_relaxed);
-            }
         }
 
         mutex(const mutex &o) = delete;
