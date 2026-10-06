@@ -9,10 +9,21 @@ add_executable(mumu_guard main.cpp mutex.h)
 
 include(CTest)
 
-find_package(GTest REQUIRED CONFIG)
+if (BUILD_TESTING)
+    find_package(GTest CONFIG QUIET)
+    if (NOT GTest_FOUND)
+        message(STATUS "GTest not found, fetching it")
+        include(FetchContent)
+        FetchContent_Declare(
+            googletest
+            URL https://github.com/google/googletest/archive/refs/tags/v1.18.0.zip
+        )
+        FetchContent_MakeAvailable(googletest)
+    endif()
 
-add_executable(mutex_tests test/mutex_tests.cpp)
-target_link_libraries(mutex_tests PRIVATE GTest::gtest)
+    add_executable(mutex_tests test/mutex_tests.cpp)
+    target_link_libraries(mutex_tests PRIVATE GTest::gtest)
 
-include(GoogleTest)
-gtest_discover_tests(mutex_tests)
+    include(GoogleTest)
+    gtest_discover_tests(mutex_tests)
+endif()
